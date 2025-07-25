@@ -247,11 +247,31 @@ async fn upload_video(
     })))
 }
 
+#[derive(Debug, Deserialize)]
+struct UploadParams {
+    bucket: String,
+    file: String,
+}
+
 async fn upload_raw_video(
-    Path((bucket_name, object_name)): Path<(String, String)>,
+    Query(params): Query<UploadParams>,
     headers: axum::http::HeaderMap,
     body: Body,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    println!("[DEBUG] Upload raw video function called");
+    // Validate bucket and file names
+    let valid_bucket = params.bucket.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+    let valid_file = params.file.chars().all(|c| c.is_ascii_alphanumeric() || "-_.".contains(c));
+    
+    if !valid_bucket || !valid_file {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Invalid bucket or file name".to_string(),
+        ));
+    }
+    
+    let bucket_name = params.bucket;
+    let object_name = params.file;
     let minio_endpoint = env::var("MINIO_ENDPOINT").unwrap_or_else(|_| "minio:9000".to_string());
     let minio_access_key = env::var("MINIO_ACCESS_KEY").unwrap_or_else(|_| "minioadmin".to_string());
     let minio_secret_key = env::var("MINIO_SECRET_KEY").unwrap_or_else(|_| "minioadmin".to_string());
@@ -336,7 +356,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/videos/id", get(get_video_by_id))
         .route("/videos/path", get(get_video_by_path))
         .route("/upload-video", post(upload_video))
-        .route("/upload-raw-video/:bucket_name/:object_name", post(upload_raw_video))
+        .route("/upload-raw-video", post(upload_raw_video))
         // Middleware
         .layer(cors)
         .with_state(pool);
