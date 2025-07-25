@@ -19,8 +19,8 @@ function App() {
     setLoading(true)
     setError(null)
     try {
-      // Using a relative URL or window.location.hostname to ensure it works in the browser
-      // The port is 8081 as defined in the docker-compose.yaml and exposed to the host
+      // Using localhost to access the backend from the browser
+      // The port 8081 is exposed in docker-compose.yaml
       const response = await fetch('http://localhost:8081/health')
       
       if (!response.ok) {
@@ -37,38 +37,35 @@ function App() {
     }
   }
   
-  // Handle file selection
-  const handleFileSelect = (event) => {
+  // Handle file selection and upload
+  const handleFileSelect = async (event) => {
     const file = event.target.files[0]
-    if (file) {
-      if (file.type === 'video/mp4') {
-        setSelectedFile(file)
-        setUploadStatus('File selected: ' + file.name)
-        setError(null)
-      } else {
-        setSelectedFile(null)
-        setError('Please select an MP4 file')
-        setUploadStatus(null)
-      }
-    }
-  }
-  
-  // Handle file upload to MinIO via backend
-  const uploadToMinIO = async () => {
-    if (!selectedFile) {
-      setError('Please select a file first')
+    if (!file) return
+    
+    if (file.type !== 'video/mp4') {
+      setSelectedFile(null)
+      setError('Please select an MP4 file')
+      setUploadStatus(null)
       return
     }
     
-    setLoading(true)
-    setUploadStatus('Uploading...')
+    setSelectedFile(file)
+    setUploadStatus('Uploading ' + file.name + '...')
     setError(null)
+    
+    // Proceed with upload
+    const file_name = file.name
+    setLoading(true)
     
     try {
       const formData = new FormData()
-      formData.append('file', selectedFile)
+      formData.append('file', file)
       
-      const response = await fetch('http://localhost:8081/upload-video', {
+      // Sanitize and encode the filename
+      const safeFileName = file_name.replace(/[^a-zA-Z0-9\-._]/g, '');
+      
+      // Use localhost to access the backend from the browser
+      const response = await fetch(`http://localhost:8081/upload-raw-video?bucket=bucket&file=${encodeURIComponent(safeFileName)}`, {
         method: 'POST',
         body: formData,
       })
@@ -89,7 +86,7 @@ function App() {
     }
   }
   
-  // Trigger file input click
+  // Function to trigger file input click
   const triggerFileInput = () => {
     fileInputRef.current.click()
   }
@@ -104,7 +101,7 @@ function App() {
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
       </div>
-      <h1>Vite + React</h1>
+      <h1>Vite + React + MinIO</h1>
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
@@ -145,21 +142,12 @@ function App() {
           style={{ display: 'none' }} 
         />
         
-        {/* File selection button */}
+        {/* Single upload button */}
         <button 
           onClick={triggerFileInput} 
           disabled={loading}
-          style={{ marginRight: '10px' }}
         >
-          Select MP4 File
-        </button>
-        
-        {/* Upload to MinIO button */}
-        <button 
-          onClick={uploadToMinIO} 
-          disabled={!selectedFile || loading}
-        >
-          Upload to MinIO
+          {loading ? 'Uploading...' : 'Upload MP4 to MinIO'}
         </button>
         
         {/* Upload status */}
