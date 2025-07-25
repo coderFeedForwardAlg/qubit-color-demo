@@ -1,0 +1,27 @@
+# Ignore .mp4 files
+*.mp4
+
+# Ignore environment variables file
+.env
+
+# Ignore Rust build directory
+/target/
+backend/target/
+
+# Ignore Cargo.lock for libraries (if this is a library)
+# Cargo.lock
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
